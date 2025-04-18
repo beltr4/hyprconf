@@ -1,4 +1,4 @@
-use gtk::{gio, glib, Application};
+use gtk::{gio, Application};
 use gtk::prelude::ApplicationExt;
 use std::env;
 use std::path::PathBuf;

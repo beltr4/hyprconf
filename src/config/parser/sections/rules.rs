@@ -1,7 +1,5 @@
 use crate::config::models::{WindowRule, WorkspaceRule, LayerRule};
-use std::collections::HashMap;
 use anyhow::Result;
-use log::debug;
 
 /// Parse a window rule
 pub fn parse_window_rule(content: &str) -> Result<WindowRule> {

@@ -1,6 +1,5 @@
 use std::io::{self, Write};
 use crate::config::models::AnimationsSection;
-use crate::config::models::Animation;
 use crate::config::writer::utils::{CommentStyle, write_section_header, write_option, write_boolean_option};
 
 pub fn write_section<W: Write>(

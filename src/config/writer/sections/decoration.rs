@@ -1,5 +1,5 @@
 use std::io::{self, Write};
-use crate::config::models::{DecorationSection, BlurSection, ShadowSection};
+use crate::config::models::DecorationSection;
 use crate::config::writer::utils::{CommentStyle, write_section_header, write_option, write_boolean_option};
 use crate::config::writer::sections::blur; // Importing the blur writer
 use crate::config::writer::sections::shadow; // Importing the shadow writer

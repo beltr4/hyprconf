@@ -1,6 +1,5 @@
 use crate::config::models::KeyBind;
 use anyhow::Result;
-use log::debug;
 
 /// Parse a key bind from line
 pub fn parse_key_bind(content: &str) -> Result<KeyBind> {

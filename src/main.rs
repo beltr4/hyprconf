@@ -6,14 +6,12 @@ mod ui;
 #[cfg(test)]
 mod tests;
 
-use std::path::PathBuf;
 use std::process;
 use gio::prelude::*;
 
 use clap::{Parser, Subcommand};
 use config::parser::core::ConfigParser;
 use config::writer::core::ConfigWriter;
-use ui::window::AppWindow;
 
 #[derive(Parser)]
 #[command(name = "hyprconf")]

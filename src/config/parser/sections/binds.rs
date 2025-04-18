@@ -1,10 +1,9 @@
 // src/config/parser/sections/binds.rs
-use crate::config::models::{BindsSection, KeyBind};
+use crate::config::models::BindsSection;
 use crate::config::parser::utils::parse_bool;
 use crate::config::parser::sections::keybinds::parse_key_bind;
 use anyhow::Result;
 use log::debug;
-use std::collections::HashMap;
 
 /// Parse the binds section
 pub fn parse_binds_section(section: &mut BindsSection, content: &str) -> Result<()> {

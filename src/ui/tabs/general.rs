@@ -1,5 +1,4 @@
-use gtk::prelude::*;
-use gtk::{Box as GtkBox, Grid, Label, Switch, SpinButton, Adjustment, ComboBoxText};
+use gtk::Box as GtkBox;
 use std::rc::Rc;
 use std::cell::RefCell;
 

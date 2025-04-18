@@ -1,7 +1,6 @@
 use crate::config::models::DeviceConfig;
 use crate::config::parser::utils::parse_bool;
 use anyhow::Result;
-use log::debug;
 
 pub fn parse_device_config(content: &str) -> Result<DeviceConfig> {
     let mut device = DeviceConfig::default();

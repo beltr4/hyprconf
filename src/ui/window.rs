@@ -1,8 +1,7 @@
 use gtk::prelude::*;
-use gtk::{Application, ApplicationWindow, HeaderBar, Button, Stack, StackSwitcher, Label, Box as GtkBox};
+use gtk::{Application, ApplicationWindow, HeaderBar, Button, Stack, StackSwitcher, Box as GtkBox};
 use std::rc::Rc;
 use std::cell::RefCell;
-use std::path::Path;
 
 use crate::app::{self, AppState};
 //use crate::safety::backup::BackupManager;

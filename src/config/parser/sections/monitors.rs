@@ -1,7 +1,5 @@
 use crate::config::models::MonitorConfig;
-use crate::config::parser::utils::parse_bool;
 use anyhow::Result;
-use log::debug;
 
 pub fn parse_monitor_config(content: &str) -> Result<MonitorConfig> {
     let mut monitor = MonitorConfig::default();
