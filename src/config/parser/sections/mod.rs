@@ -1,19 +1,25 @@
-
 pub mod animations;
 pub mod binds;
 pub mod blur;
 pub mod cursor;
 pub mod debug;
 pub mod decoration;
+pub mod devices;
 pub mod dwindle;
+pub mod ecosystem;
+pub mod experimental;
 pub mod general;
 pub mod gestures;
 pub mod group;
 pub mod input;
+pub mod keybinds;
 pub mod master;
 pub mod misc;
+pub mod monitors;
 pub mod opengl;
+pub mod permissions;
 pub mod render;
+pub mod rules;
 pub mod shadow;
 pub mod snap;
 pub mod touch;

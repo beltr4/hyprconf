@@ -1,4 +1,5 @@
 use std::path::Path;
+use dirs;
 
 /// Find the default Hyprland config file
 pub fn find_default_config() -> Option<String> {

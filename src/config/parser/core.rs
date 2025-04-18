@@ -1,4 +1,3 @@
-
 use std::fs;
 use std::path::Path;
 use std::collections::HashMap;
@@ -6,232 +5,203 @@ use anyhow::{Result, Context};
 use log::{debug, info};
 
 use crate::config::models::*;
-use crate::config::parser::sections::*;
-
+use crate::config::parser::sections::{
+    general, decoration, animations, input, gestures, group, misc, binds,
+    xwayland, opengl, render, cursor, dwindle, master, debug,
+    snap, blur, shadow, touch, keybinds,
+    ecosystem, experimental, permissions,
+};
 
 pub struct ConfigParser;
 
 impl ConfigParser {
-    /// Parse a Hyprland configuration file
     pub fn parse_file<P: AsRef<Path>>(path: P) -> Result<HyprlandConfig> {
         let content = fs::read_to_string(path)
             .context("Failed to read Hyprland config file")?;
-            
         Self::parse_string(&content)
     }
-    
-    /// Parse a Hyprland configuration from a string
+
     pub fn parse_string(content: &str) -> Result<HyprlandConfig> {
         debug!("Parsing Hyprland configuration");
-        
-        // Start with default config
+
         let mut config = HyprlandConfig::default();
         let mut variables = HashMap::new();
         let mut env_vars = HashMap::new();
         let mut autostart = Vec::new();
-        
-        // Track current section and any nested sections
+
         let mut current_section: Option<String> = None;
         let mut nested_section: Option<String> = None;
         let mut in_block = false;
         let mut block_content = String::new();
-        
-        // Process each line
-        for (_i, line) in content.lines().enumerate() {
+
+        for line in content.lines() {
             let line = line.trim();
-            
-            // Skip empty lines and comments
-            if line.is_empty() || line.starts_with('#') {
-                continue;
-            }
-            
-            // Check if this is a variable definition
+            if line.is_empty() || line.starts_with('#') { continue; }
+
             if line.starts_with('$') {
-                if let Some((name, value)) = line.split_once('=') {
-                    let name = name.trim();
-                    let value = value.trim();
-                    debug!("Found variable: {} = {}", name, value);
-                    variables.insert(name.to_string(), value.to_string());
+                if let Some((n,v)) = line.split_once('=') {
+                    variables.insert(n.trim().to_string(), v.trim().to_string());
                 }
                 continue;
             }
-            
-            // Check if this is an environment variable
             if line.starts_with("env = ") {
-                let parts: Vec<&str> = line["env = ".len()..].splitn(2, ',').collect();
-                if parts.len() == 2 {
-                    let name = parts[0].trim();
-                    let value = parts[1].trim();
-                    debug!("Found env var: {} = {}", name, value);
-                    env_vars.insert(name.to_string(), value.to_string());
+                if let Some((n,v)) = line[6..].split_once(',') {
+                    env_vars.insert(n.trim().to_string(), v.trim().to_string());
                 }
                 continue;
             }
-            
-            // Check if this is an autostart command
             if line.starts_with("exec-once = ") {
-                let command = line["exec-once = ".len()..].trim();
-                debug!("Found autostart: {}", command);
-                autostart.push(command.to_string());
+                autostart.push(line[13..].trim().to_string());
                 continue;
             }
-            
-            // Check if this is a source directive
-            if line.starts_with("source") {
-                let parts: Vec<&str> = line.split_whitespace().collect();
-                if parts.len() >= 2 {
-                    debug!("Found source directive: {}", parts[1]);
-                    // TODO: Handle including other files
-                }
-                continue;
-            }
-            
-            // Check for nested section end
+            if line.starts_with("source") { continue; }
+
             if line.contains('}') && in_block && nested_section.is_some() {
-                if let (Some(section), Some(subsection)) = (&current_section, &nested_section) {
-                    debug!("Processing nested section block: {}:{}", section, subsection);
-                    Self::process_nested_section_block(&mut config, section, subsection, &block_content)?;
+                if let (Some(sec), Some(sub)) = (&current_section, &nested_section) {
+                    Self::process_nested_section_block(&mut config, sec, sub, &block_content)?;
                 }
                 nested_section = None;
                 block_content.clear();
                 continue;
             }
-            
-            // Check for section end
-            if line.contains('}') && in_block && nested_section.is_none() {
-                if let Some(section) = &current_section {
-                    debug!("Processing section block: {}", section);
-                    Self::process_section_block(&mut config, section, &block_content)?;
+            if line.contains('}') && in_block {
+                if let Some(sec) = &current_section {
+                    Self::process_section_block(&mut config, sec, &block_content)?;
                 }
                 in_block = false;
                 current_section = None;
                 block_content.clear();
                 continue;
             }
-            
-            // Check for nested section start within a section
-            if line.contains('{') && in_block && nested_section.is_none() {
-                let subsection_name = line.split('{').next().unwrap().trim().to_string();
-                nested_section = Some(subsection_name.clone());
-                debug!("Entering nested section: {}:{}", current_section.as_ref().unwrap_or(&"".to_string()), subsection_name);
+            if line.contains('{') && in_block {
+                nested_section = Some(line.split('{').next().unwrap().trim().to_string());
+                debug!("Entering nested section: {}:{}",
+                    current_section.as_ref().unwrap_or(&String::new()),
+                    nested_section.as_ref().unwrap());
                 continue;
             }
-            
-            // Check for section start
-            if line.contains('{') && !in_block {
-                let section_name = line.split('{').next().unwrap().trim().to_string();
-                current_section = Some(section_name.clone());
+            if line.contains('{') {
+                current_section = Some(line.split('{').next().unwrap().trim().to_string());
                 in_block = true;
-                debug!("Entering section: {}", section_name);
+                debug!("Entering section: {}", current_section.as_ref().unwrap());
                 continue;
             }
-            
-            // If we're in a block, add the line to the block content
             if in_block {
                 block_content.push_str(line);
-                block_content.push('\n');
+                block_content.push_str("\n");
                 continue;
             }
-            
-            // Monitor configuration
+
             if line.starts_with("monitor=") {
-                let parts: Vec<&str> = line["monitor=".len()..].split(',').collect();
+                let parts: Vec<&str> = line[8..].split(',').collect();
                 if parts.len() >= 4 {
-                    let monitor = MonitorConfig {
-                        name: parts[0].trim().to_string(),
-                        resolution: parts[1].trim().to_string(),
-                        position: parts[2].trim().to_string(),
-                        scale: parts[3].trim().parse().unwrap_or(1.0),
-                    };
-                    config.monitors.push(monitor);
+                    let mut m = MonitorConfig::default();
+                    m.name = parts[0].trim().to_string();
+                    m.resolution = parts[1].trim().to_string();
+                    m.position = parts[2].trim().to_string();
+                    m.scale = parts[3].trim().parse().unwrap_or(1.0);
+                    if let Some(t)  = parts.get(4)  { m.transform = t.trim().parse().ok(); }
+                    if let Some(mi) = parts.get(5)  { m.mirror = Some(mi.trim().to_string()); }
+                    if let Some(bd) = parts.get(6)  { m.bitdepth = bd.trim().parse().ok(); }
+                    if let Some(cm) = parts.get(7)  { m.color_management = Some(cm.trim().to_string()); }
+                    if let Some(sb) = parts.get(8)  { m.sdr_brightness = sb.trim().parse().ok(); }
+                    if let Some(ss) = parts.get(9)  { m.sdr_saturation = ss.trim().parse().ok(); }
+                    if let Some(v)  = parts.get(10) { m.vrr = v.trim().parse().ok(); }
+                    if let Some(d)  = parts.get(11) { m.disable = d.trim().parse::<i32>().unwrap_or(0)!=0; }
+                    if parts.len() >= 16 {
+                        m.reserved_area = Some((
+                            parts[12].trim().parse().unwrap_or(0),
+                            parts[13].trim().parse().unwrap_or(0),
+                            parts[14].trim().parse().unwrap_or(0),
+                            parts[15].trim().parse().unwrap_or(0),
+                        ));
+                    }
+                    config.monitors.push(m);
                 }
                 continue;
             }
-            
-            // Window rules
             if line.starts_with("windowrule = ") {
-                let parts: Vec<&str> = line["windowrule = ".len()..].splitn(2, ',').collect();
-                if parts.len() == 2 {
-                    let rule = WindowRule {
-                        rule: parts[0].trim().to_string(),
-                        value: parts[1].trim().to_string(),
-                    };
-                    config.window_rules.push(rule);
+                let mut it = line[14..].split(',').map(str::trim);
+                if let (Some(r), Some(v)) = (it.next(), it.next()) {
+                    let params = it.map(|s| s.to_string()).collect();
+                    config.window_rules.push(WindowRule { rule: r.to_string(), value: v.to_string(), parameters: params });
                 }
                 continue;
             }
-            
-            // Workspace rules
             if line.starts_with("workspace = ") {
-                let parts: Vec<&str> = line["workspace = ".len()..].splitn(2, ',').collect();
-                if parts.len() == 2 {
-                    let rule = WorkspaceRule {
-                        name: parts[0].trim().to_string(),
-                        params: parts[1].trim().to_string(),
-                    };
-                    config.workspace_rules.push(rule);
+                let mut it = line[12..].split(',').map(str::trim);
+                if let Some(ws) = it.next() {
+                    let mut map = HashMap::new();
+                    for kv in it {
+                        if let Some((k,v)) = kv.split_once('=') {
+                            map.insert(k.trim().to_string(), v.trim().to_string());
+                        }
+                    }
+                    config.workspace_rules.push(WorkspaceRule { workspace: ws.to_string(), rules: map });
                 }
                 continue;
             }
-            
-            // Keybindings
-            if line.starts_with("bind = ") || line.starts_with("bindl = ") || 
-               line.starts_with("bindr = ") || line.starts_with("bindm = ") || 
-               line.starts_with("bindle = ") || line.starts_with("bindel = ") {
-                // Process keybindings
-                // TODO: Implement detailed keybinding parsing
-                continue;
-            }
-            
-            // If we're not in a block, this could be a top-level setting
-            if let Some((key, value)) = line.split_once('=') {
-                let key = key.trim();
-                let value = value.trim();
-                debug!("Found top-level setting: {} = {}", key, value);
-                // TODO: Handle top-level settings
+            if line.starts_with("bind") { continue; }
+            if let Some((k,v)) = line.split_once('=') {
+                debug!("Top-level setting: {} = {}", k.trim(), v.trim());
             }
         }
-        
-        // Store the parsed variables, env vars, and autostart commands
+
         config.variables = variables;
         config.environment_variables = env_vars;
         config.autostart_programs = autostart;
-        
         Ok(config)
     }
-    
-    /// Process a section block of configuration
+
     fn process_section_block(
-        config: &mut HyprlandConfig, 
-        section: &str, 
+        config: &mut HyprlandConfig,
+        section: &str,
         content: &str
     ) -> Result<()> {
         match section {
-            "general" => general::parse_general_section(&mut config.general, content)?,
+            "general"    => general::parse_general_section(&mut config.general, content)?,
             "decoration" => decoration::parse_decoration_section(&mut config.decoration, content)?,
             "animations" => animations::parse_animations_section(&mut config.animations, content)?,
-            "input" => input::parse_input_section(&mut config.input, content)?,
-            "gestures" => gestures::parse_gestures_section(&mut config.gestures, content)?,
-            "group" => group::parse_group_section(&mut config.group, content)?,
-            "misc" => misc::parse_misc_section(&mut config.misc, content)?,
-            "binds" => binds::parse_binds_section(&mut config.binds, content)?,
-            "xwayland" => xwayland::parse_xwayland_section(&mut config.xwayland, content)?,
-            "opengl" => opengl::parse_opengl_section(&mut config.opengl, content)?,
-            "render" => render::parse_render_section(&mut config.render, content)?,
-            "cursor" => cursor::parse_cursor_section(&mut config.cursor, content)?,
-            "dwindle" => dwindle::parse_dwindle_section(&mut config.dwindle, content)?,
-            "master" => master::parse_master_section(&mut config.master, content)?,
-            "debug" => debug::parse_debug_section(&mut config.debug, content)?,
-            _ => {
-                debug!("Unknown section: {}", section);
-                // We don't want to fail parsing if we encounter an unknown section
+            "input"      => input::parse_input_section(&mut config.input, content)?,
+            "gestures"   => gestures::parse_gestures_section(&mut config.gestures, content)?,
+            "group"      => group::parse_group_section(&mut config.group, content)?,
+            "misc"       => misc::parse_misc_section(&mut config.misc, content)?,
+            "binds"      => binds::parse_binds_section(&mut config.binds, content)?,
+            "xwayland"   => xwayland::parse_xwayland_section(&mut config.xwayland, content)?,
+            "opengl"     => opengl::parse_opengl_section(&mut config.opengl, content)?,
+            "render"     => render::parse_render_section(&mut config.render, content)?,
+            "cursor"     => cursor::parse_cursor_section(&mut config.cursor, content)?,
+            "dwindle"    => dwindle::parse_dwindle_section(&mut config.dwindle, content)?,
+            "master"     => master::parse_master_section(&mut config.master, content)?,
+            "debug"      => debug::parse_debug_section(&mut config.debug, content)?,
+            "ecosystem"  => ecosystem::parse_ecosystem_section(&mut config.ecosystem, content)?,
+            "experimental"=> experimental::parse_experimental_section(&mut config.experimental, content)?,
+            "bezier_curves" => {
+                config.bezier_curves = content.lines()
+                    .filter_map(|l| l.trim().split_once('=').map(|(k,v)| (k.trim().to_string(), v.trim().to_string())))
+                    .collect();
             }
+            "submap_definitions" => {
+                let mut m = HashMap::new();
+                for l in content.lines().map(str::trim).filter(|l| !l.is_empty()) {
+                    if let Some((name, binds_str)) = l.split_once('=') {
+                        let vec = binds_str.split(';')
+                            .filter_map(|e| keybinds::parse_key_bind(e.trim()).ok())
+                            .collect::<Vec<_>>();
+                        m.insert(name.trim().to_string(), vec);
+                    }
+                }
+                config.submap_definitions = m;
+            }
+            "permission" => {
+                let p = permissions::parse_permission_section(content)?;
+                config.permissions.push(p);
+            }
+            _ => debug!("Unknown section: {}", section),
         }
-        
         Ok(())
     }
-    
-    /// Process a nested section block of configuration
+
     fn process_nested_section_block(
         config: &mut HyprlandConfig,
         section: &str,
@@ -246,14 +216,8 @@ impl ConfigParser {
             ("input", "touchdevice") => touch::parse_touchdevice_section(&mut config.input.touchdevice, content)?,
             ("input", "tablet") => touch::parse_tablet_section(&mut config.input.tablet, content)?,
             ("group", "groupbar") => group::parse_groupbar_section(&mut config.group.groupbar, content)?,
-            _ => {
-                debug!("Unknown nested section: {}:{}", section, subsection);
-                // We don't want to fail parsing if we encounter an unknown nested section
-            }
+            _ => debug!("Unknown nested section: {}:{}", section, subsection),
         }
-        
         Ok(())
     }
-    
-    
 }

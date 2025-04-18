@@ -9,35 +9,34 @@ pub fn write_section<W: Write>(
     comment_style: &CommentStyle,
 ) -> io::Result<()> {
     write_section_header(writer, "animations {", comment_style)?;
-    
+
     // Write enabled state
     write_boolean_option(writer, " enabled", animations.enabled, None, comment_style)?;
-    
+
     // Write first launch animation
     write_boolean_option(writer, " first_launch_animation", animations.first_launch_animation, None, comment_style)?;
-    
+
     // Write bezier curves
     for (name, curve) in &animations.beziers {
         write_option(writer, &format!(" bezier = {}", name), curve, None, comment_style)?;
     }
-    
+
     // Write animations
     for anim in &animations.animations {
-        let mut parts = vec![
-            anim.name.as_str(),
-            &anim.enabled.to_string(),
-            &anim.speed.to_string(),
-            &anim.curve
-        ];
-        
-        // Add style if present
+        // Build the animation line: name,enabled,speed,curve[,style]
+        let mut line = format!("{}, {}, {}, {}",
+            anim.name,
+            anim.enabled,
+            anim.speed,
+            anim.curve
+        );
         if let Some(style) = &anim.style {
-            parts.push(style);
+            line.push_str(", ");
+            line.push_str(style);
         }
-        
-        write_option(writer, " animation", &parts.join(", "), None, comment_style)?;
+        write_option(writer, " animation", &line, None, comment_style)?;
     }
-    
+
     writeln!(writer, "}}")?;
     Ok(())
 }

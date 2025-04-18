@@ -8,6 +8,7 @@ mod tests;
 
 use std::path::PathBuf;
 use std::process;
+use gio::prelude::*;
 
 use clap::{Parser, Subcommand};
 use config::parser::core::ConfigParser;
@@ -46,8 +47,7 @@ fn main() {
             let path = shellexpand::tilde(&path).to_string();
             println!("Validating config file: {}", path);
             
-            let parser = ConfigParser::new();
-            match parser.parse_file(&path) {
+            match ConfigParser::parse_file(&path) {
                 Ok(_) => {
                     println!("Configuration file is valid!");
                     process::exit(0);
@@ -57,6 +57,7 @@ fn main() {
                     process::exit(1);
                 }
             }
+            
         }
         Some(Commands::Generate { path }) => {
             let path = shellexpand::tilde(&path).to_string();
@@ -81,8 +82,7 @@ fn main() {
         None => {
             // Run the GUI application
             let app = app::build_app();
-            let window = AppWindow::new(&app);
-            window.run();
+            app.run();
         }
     }
 }

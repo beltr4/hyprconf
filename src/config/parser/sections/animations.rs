@@ -31,12 +31,41 @@ pub fn parse_animations_section(section: &mut AnimationsSection, content: &str) 
                 },
                 "animation" => {
                     let parts: Vec<&str> = value.split(',').collect();
-                    if parts.len() >= 2 {
+                    if parts.len() >= 3 {
                         let name = parts[0].trim();
-                        let params = parts[1..].join(",").trim().to_string();
+                        // Parse animation parameters
+                        let mut enabled = true;
+                        let mut speed = 10; // Default speed
+                        let mut curve = "default".to_string();
+                        let mut style = None;
+                        
+                        for i in 1..parts.len() {
+                            let param = parts[i].trim();
+                            if param == "enabled" || param == "on" {
+                                enabled = true;
+                            } else if param == "disabled" || param == "off" {
+                                enabled = false;
+                            } else if param.starts_with("speed:") {
+                                if let Some(speed_str) = param.strip_prefix("speed:") {
+                                    speed = speed_str.trim().parse().unwrap_or(10);
+                                }
+                            } else if param.starts_with("curve:") {
+                                if let Some(curve_str) = param.strip_prefix("curve:") {
+                                    curve = curve_str.trim().to_string();
+                                }
+                            } else if param.starts_with("style:") {
+                                if let Some(style_str) = param.strip_prefix("style:") {
+                                    style = Some(style_str.trim().to_string());
+                                }
+                            }
+                        }
+                        
                         section.animations.push(Animation {
                             name: name.to_string(),
-                            params,
+                            enabled,
+                            speed,
+                            curve,
+                            style,
                         });
                     }
                 },
