@@ -595,6 +595,7 @@ dependencies = [
  "dirs",
  "env_logger",
  "execute",
+ "glib",
  "glib-build-tools",
  "gtk4",
  "log",
