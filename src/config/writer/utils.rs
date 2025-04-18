@@ -19,7 +19,7 @@ impl CommentStyle {
 pub fn write_section_header<W: Write>(
     writer: &mut W,
     section_name: &str,
-    comment_style: &CommentStyle,
+    _comment_style: &CommentStyle,
 ) -> io::Result<()> {
     writeln!(writer)?;
     writeln!(writer, "{}", section_name)?;

@@ -37,7 +37,7 @@ impl AppWindow {
         window.set_default_size(900, 600);
 
         // Backup manager (unused here, but created for later use)
-        let backup_dir = app::get_config_backup_dir();
+        //let backup_dir = app::get_config_backup_dir();
         //let _backup_manager = BackupManager::new(backup_dir);
 
         // Header bar with buttons
@@ -88,7 +88,7 @@ impl AppWindow {
             let state = app_state.clone();
             save_button.connect_clicked(move |_| {
                 let st = state.borrow();
-                if let Some(p) = st.get_current_path() {
+                if let Some(_p) = st.get_current_path() {
                     if let Err(e) = st.save() {
                         eprintln!("Error saving: {}", e);
                     }
@@ -147,7 +147,7 @@ impl AppWindow {
                     eprintln!("Backup failed: {}", e);
                     return;
                 }
-                if let Some(p) = st.get_current_path() {
+                if let Some(_p) = st.get_current_path() {
                     if let Err(e) = st.save() {
                         eprintln!("Save failed: {}", e);
                     } else if let Err(e) = Self::reload_hyprland_config() {

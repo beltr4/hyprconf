@@ -30,7 +30,7 @@ pub fn parse_key_bind(content: &str) -> Result<KeyBind> {
     let mut description = None;
     
     // Check for flags and description at the end of arg
-    if let Some((arg_part, meta)) = arg.split_once('#') {
+    if let Some((_arg_part, meta)) = arg.split_once('#') {
         let meta_parts: Vec<&str> = meta.split(',').collect();
         
         for part in meta_parts {
