@@ -1,0 +1,20 @@
+
+pub mod animations;
+pub mod binds;
+pub mod blur;
+pub mod cursor;
+pub mod debug;
+pub mod decoration;
+pub mod dwindle;
+pub mod general;
+pub mod gestures;
+pub mod group;
+pub mod input;
+pub mod master;
+pub mod misc;
+pub mod opengl;
+pub mod render;
+pub mod shadow;
+pub mod snap;
+pub mod touch;
+pub mod xwayland;

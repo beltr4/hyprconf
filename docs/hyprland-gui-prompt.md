@@ -77,27 +77,5 @@ When appropriate, break down complex tasks into smaller, manageable steps. As we
 Completed tasks:
 1. Created a github repo called hyprconf
 2. Create a cargo project within the repo
-3. Created the basic file structure for the app:
-   ├── Cargo.toml
-   ├── docs
-   │   └── hyprland-gui-prompt.md
-   ├── resources
-   │   └── ui
-   └── src
-      ├── app.rs
-      ├── config
-      │   ├── models.rs
-      │   ├── mod.rs
-      │   ├── parser.rs
-      │   └── writer.rs
-      ├── main.rs
-      ├── safety
-      │   ├── backup.rs
-      │   ├── mod.rs
-      │   └── rollback.rs
-      └── ui
-         ├── mod.rs
-         ├── tabs.rs
-         ├── widgets
-         └── window.rs
+3. Created the basic file structure for the app.
 4. 
