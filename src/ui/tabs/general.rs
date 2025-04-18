@@ -1,5 +1,8 @@
 use gtk::prelude::*;
 use gtk::{Stack, Box as GtkBox, Orientation, Label, Scale, Switch, ColorButton, Frame, ScrolledWindow, DropDown};
+use glib::clone;
+use gtk::gdk; // Use gtk4's gdk module for RGBA
+
 use crate::config::models::GeneralSection;
 
 /// Struct to hold all widgets for the general tab
@@ -34,7 +37,7 @@ impl GeneralTab {
             resize_on_border: Switch::new(),
             no_focus_fallback: Switch::new(),
             allow_tearing: Switch::new(),
-            layout_combo: DropDown::new(Some(&layout_model), None),
+            layout_combo: DropDown::new(Some(layout_model), None::<gtk::Expression>), // Specify type for None
         }
     }
     
@@ -286,128 +289,152 @@ impl GeneralTab {
         self.layout_combo.set_selected(layout_index as u32);
     }
     
-    /// Connect the UI signals to update the config
-    pub fn connect_signals(&self, section: &mut GeneralSection) {
+    pub fn connect_signals<F>(&self, callback: F) 
+    where 
+        F: Fn(&str, &dyn std::any::Any) + 'static
+    {
         // Border size
-        self.border_size.connect_value_changed(clone!(@strong section => move |scale| {
+        let callback = std::rc::Rc::new(callback);
+        let cb = callback.clone();
+        self.border_size.connect_value_changed(move |scale| {
             let value = scale.value() as i32;
-            section.border_size = value;
-        }));
+            cb("border_size", &value);
+        });
         
         // Gaps in
-        self.gaps_in.connect_value_changed(clone!(@strong section => move |scale| {
+        let cb = callback.clone();
+        self.gaps_in.connect_value_changed(move |scale| {
             let value = scale.value() as i32;
-            section.gaps_in = value.to_string();
-        }));
+            cb("gaps_in", &value.to_string());
+        });
         
         // Gaps out
-        self.gaps_out.connect_value_changed(clone!(@strong section => move |scale| {
+        let cb = callback.clone();
+        self.gaps_out.connect_value_changed(move |scale| {
             let value = scale.value() as i32;
-            section.gaps_out = value.to_string();
-        }));
+            cb("gaps_out", &value.to_string());
+        });
         
         // Gaps workspaces
-        self.gaps_workspaces.connect_value_changed(clone!(@strong section => move |scale| {
+        let cb = callback.clone();
+        self.gaps_workspaces.connect_value_changed(move |scale| {
             let value = scale.value() as i32;
-            section.gaps_workspaces = value;
-        }));
+            cb("gaps_workspaces", &value);
+        });
         
         // Active border color
-        self.active_border_color.connect_rgba_notify(clone!(@strong section => move |button| {
+        let cb = callback.clone();
+        self.active_border_color.connect_rgba_notify(move |button| {
             let rgba = button.rgba();
-            section.col_active_border = format!(
+            let color_string = format!(
                 "rgba({:02x}{:02x}{:02x}{:02x})",
                 (rgba.red() * 255.0) as u8,
                 (rgba.green() * 255.0) as u8,
                 (rgba.blue() * 255.0) as u8,
                 (rgba.alpha() * 255.0) as u8
             );
-        }));
+            cb("col_active_border", &color_string);
+        });
         
         // Inactive border color
-        self.inactive_border_color.connect_rgba_notify(clone!(@strong section => move |button| {
+        let cb = callback.clone();
+        self.inactive_border_color.connect_rgba_notify(move |button| {
             let rgba = button.rgba();
-            section.col_inactive_border = format!(
+            let color_string = format!(
                 "rgba({:02x}{:02x}{:02x}{:02x})",
                 (rgba.red() * 255.0) as u8,
                 (rgba.green() * 255.0) as u8,
                 (rgba.blue() * 255.0) as u8,
                 (rgba.alpha() * 255.0) as u8
             );
-        }));
+            cb("col_inactive_border", &color_string);
+        });
         
         // No border on floating
-        self.no_border_floating.connect_state_notify(clone!(@strong section => move |switch| {
-            section.no_border_on_floating = switch.is_active();
-        }));
+        let cb = callback.clone();
+        self.no_border_floating.connect_state_notify(move |switch| {
+            let value = switch.is_active();
+            cb("no_border_on_floating", &value);
+        });
         
         // Resize on border
-        self.resize_on_border.connect_state_notify(clone!(@strong section => move |switch| {
-            section.resize_on_border = switch.is_active();
-        }));
+        let cb = callback.clone();
+        self.resize_on_border.connect_state_notify(move |switch| {
+            let value = switch.is_active();
+            cb("resize_on_border", &value);
+        });
         
         // No focus fallback
-        self.no_focus_fallback.connect_state_notify(clone!(@strong section => move |switch| {
-            section.no_focus_fallback = switch.is_active();
-        }));
+        let cb = callback.clone();
+        self.no_focus_fallback.connect_state_notify(move |switch| {
+            let value = switch.is_active();
+            cb("no_focus_fallback", &value);
+        });
         
         // Allow tearing
-        self.allow_tearing.connect_state_notify(clone!(@strong section => move |switch| {
-            section.allow_tearing = switch.is_active();
-        }));
+        let cb = callback.clone();
+        self.allow_tearing.connect_state_notify(move |switch| {
+            let value = switch.is_active();
+            cb("allow_tearing", &value);
+        });
         
         // Layout
-        self.layout_combo.connect_selected_notify(clone!(@strong section => move |dropdown| {
+        let cb = callback.clone();
+        self.layout_combo.connect_selected_notify(move |dropdown| {
             let selected = dropdown.selected();
-            section.layout = match selected {
-                1 => "master".to_string(),
-                _ => "dwindle".to_string(),
+            let layout = match selected {
+                1 => "master",
+                _ => "dwindle",
             };
-        }));
+            cb("layout", &layout.to_string());
+        });
     }
 }
 
 /// Helper to set ColorButton from Hyprland color format
 fn set_color_from_hyprland_string(button: &ColorButton, color_str: &str) {
-    // Parse RGBA from Hyprland format like 'rgba(33ccffee)'
     if color_str.starts_with("rgba(") && color_str.ends_with(')') {
-        let inner = &color_str[5..color_str.len()-1];
-        
-        // Handle different formats
+        let inner = &color_str[5..color_str.len() - 1];
         let rgba = if inner.contains(',') {
-            // Parse decimal format: rgba(179, 255, 26, 0.933)
             let parts: Vec<&str> = inner.split(',').collect();
-            if parts.len() >= 4 {
-                let r = parts[0].trim().parse::<f64>().unwrap_or(0.0) / 255.0;
-                let g = parts[1].trim().parse::<f64>().unwrap_or(0.0) / 255.0;
-                let b = parts[2].trim().parse::<f64>().unwrap_or(0.0) / 255.0;
-                let a = parts[3].trim().parse::<f64>().unwrap_or(1.0);
-                gdk::RGBA::new(r as f32, g as f32, b as f32, a as f32)
+            if parts.len() == 4 {
+                let r = parts[0].trim().parse::<f32>().unwrap_or(0.0) / 255.0;
+                let g = parts[1].trim().parse::<f32>().unwrap_or(0.0) / 255.0;
+                let b = parts[2].trim().parse::<f32>().unwrap_or(0.0) / 255.0;
+                let a = parts[3].trim().parse::<f32>().unwrap_or(1.0);
+                gdk::RGBA::new(r, g, b, a) // Use gtk4's gdk::RGBA
             } else {
                 gdk::RGBA::new(1.0, 1.0, 1.0, 1.0) // Default white
             }
         } else {
-            // Parse hex format: rgba(b3ff1aee)
-            let r = u8::from_str_radix(&inner[0..2], 16).unwrap_or(255) as f32 / 255.0;
-            let g = u8::from_str_radix(&inner[2..4], 16).unwrap_or(255) as f32 / 255.0;
-            let b = u8::from_str_radix(&inner[4..6], 16).unwrap_or(255) as f32 / 255.0;
-            let a = u8::from_str_radix(&inner[6..8], 16).unwrap_or(255) as f32 / 255.0;
-            gdk::RGBA::new(r, g, b, a)
+            gdk::RGBA::new(1.0, 1.0, 1.0, 1.0) // Default white
         };
-        
         button.set_rgba(&rgba);
     } else if color_str.starts_with("rgb(") && color_str.ends_with(')') {
-        // Handle RGB format without alpha
-        // Implementation similar to above but without alpha
-    } else if color_str.starts_with("0x") {
-        // Handle legacy ARGB format like 0xeeb3ff1a
+        let inner = &color_str[4..color_str.len() - 1];
+        let parts: Vec<&str> = inner.split(',').collect();
+        if parts.len() == 3 {
+            let r = parts[0].trim().parse::<f32>().unwrap_or(0.0) / 255.0;
+            let g = parts[1].trim().parse::<f32>().unwrap_or(0.0) / 255.0;
+            let b = parts[2].trim().parse::<f32>().unwrap_or(0.0) / 255.0;
+            let rgba = gdk::RGBA::new(r, g, b, 1.0);
+            button.set_rgba(&rgba);
+        } else {
+            eprintln!("Invalid rgb() format: {}", color_str);
+        }
+    } else if color_str.starts_with("0x") && color_str.len() == 10 {
         let hex = &color_str[2..];
-        let a = u8::from_str_radix(&hex[0..2], 16).unwrap_or(255) as f32 / 255.0;
-        let r = u8::from_str_radix(&hex[2..4], 16).unwrap_or(255) as f32 / 255.0;
-        let g = u8::from_str_radix(&hex[4..6], 16).unwrap_or(255) as f32 / 255.0;
-        let b = u8::from_str_radix(&hex[6..8], 16).unwrap_or(255) as f32 / 255.0;
-        
-        let rgba = gdk::RGBA::new(r, g, b, a);
-        button.set_rgba(&rgba);
+        if hex.len() == 8 {
+            let a = u8::from_str_radix(&hex[0..2], 16).unwrap_or(255) as f32 / 255.0;
+            let r = u8::from_str_radix(&hex[2..4], 16).unwrap_or(255) as f32 / 255.0;
+            let g = u8::from_str_radix(&hex[4..6], 16).unwrap_or(255) as f32 / 255.0;
+            let b = u8::from_str_radix(&hex[6..8], 16).unwrap_or(255) as f32 / 255.0;
+            let rgba = gdk::RGBA::new(r, g, b, a);
+            button.set_rgba(&rgba);
+        } else {
+            eprintln!("Invalid 0x format: {}", color_str);
+        }
+    } else {
+        eprintln!("Unsupported color format: {}", color_str);
     }
 }

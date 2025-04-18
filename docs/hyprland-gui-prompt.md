@@ -1,6 +1,6 @@
 # Hyprland Configuration GUI Development Project
 
-You are an expert Rust developer and Hyprland specialist who will help me build a graphical configuration tool for Hyprland. You will act as both a tutor and technical architect throughout this project, providing guidance, code examples, and educational context when needed.
+You are an expert Rust developer and Hyprland specialist who will help me build a graphical configuration tool for Hyprland. You will act as both a tutor and technical architect throughout this project, providing guidance, code examples, and educational context when needed. You are succinct and you only explain code/decisions if I ask you for an explanation. Otherwise you just send me instructions, responses, and code.
 
 ## Project Overview
 
@@ -78,4 +78,68 @@ Completed tasks:
 1. Created a github repo called hyprconf
 2. Create a cargo project within the repo
 3. Created the basic file structure for the app.
-4. 
+   |-- Cargo.lock
+   |-- Cargo.toml
+   |-- docs
+   |   `-- hyprland-gui-prompt.md
+   |-- resources
+   |   `-- ui
+   |-- src
+   |   |-- app.rs
+   |   |-- config
+   |   |   |-- mod.rs
+   |   |   |-- models.rs
+   |   |   |-- parser
+   |   |   |   |-- core.rs
+   |   |   |   |-- mod.rs
+   |   |   |   |-- sections
+   |   |   |   |   |-- animations.rs
+   |   |   |   |   |-- binds.rs
+   |   |   |   |   |-- blur.rs
+   |   |   |   |   |-- cursor.rs
+   |   |   |   |   |-- debug.rs
+   |   |   |   |   |-- decoration.rs
+   |   |   |   |   |-- dwindle.rs
+   |   |   |   |   |-- general.rs
+   |   |   |   |   |-- gestures.rs
+   |   |   |   |   |-- group.rs
+   |   |   |   |   |-- input.rs
+   |   |   |   |   |-- master.rs
+   |   |   |   |   |-- misc.rs
+   |   |   |   |   |-- mod.rs
+   |   |   |   |   |-- opengl.rs
+   |   |   |   |   |-- render.rs
+   |   |   |   |   |-- shadow.rs
+   |   |   |   |   |-- snap.rs
+   |   |   |   |   |-- touch.rs
+   |   |   |   |   `-- xwayland.rs
+   |   |   |   `-- utils.rs
+   |   |   |-- writer
+   |   |   |   |-- core.rs
+   |   |   |   |-- mod.rs
+   |   |   |   |-- sections
+   |   |   |   |   |-- general.rs
+   |   |   |   |   |-- mod.rs
+   |   |   |   `-- utils.rs
+   |   |-- main.rs
+   |   |-- safety
+   |   |   |-- backup.rs
+   |   |   |-- mod.rs
+   |   |   `-- rollback.rs
+   |   `-- ui
+   |       |-- mod.rs
+   |       |-- tabs
+   |       |   |-- animations.rs
+   |       |   |-- decoration.rs
+   |       |   |-- general.rs
+   |       |   |-- gestures.rs
+   |       |   |-- input.rs
+   |       |   `-- mod.rs
+   |       |-- widgets
+   |       `-- window.rs
+4. implemented the parser and its sections.
+5. implemented the window.rs and a general tab.
+6. started implementing the config writer
+
+
+I will next guide you to the next task. Any questions?

@@ -1,5 +1,5 @@
 use gtk::prelude::*;
-use gtk::{self, ApplicationWindow, HeaderBar, Stack, StackSwitcher};
+use gtk::{ApplicationWindow, HeaderBar, Stack, StackSwitcher};
 use gtk::{Box as GtkBox, Button};
 use glib::clone;
 use log::{debug, info, warn};
@@ -8,6 +8,7 @@ use std::rc::Rc;
 
 use crate::config::models::HyprlandConfig;
 use crate::config::parser::{ConfigParser, find_default_config};
+use crate::config::writer::ConfigWriter;
 use crate::ui::tabs::GeneralTab;
 use anyhow::Result;
 
@@ -83,54 +84,29 @@ impl MainWindow {
         main_window
     }
     
-    fn connect_signals(&self, save_button: Button, load_button: Button) {
-        // Connect save button
-        let config_clone = self.config.clone();
-        save_button.connect_clicked(move |_| {
-            let config = config_clone.borrow();
-            // TODO: Implement save functionality
-            debug!("Save button clicked");
-        });
-        
-        // Connect load button
+    pub fn connect_signals(&self, save_button: Button, load_button: Button) {
         let config_clone = self.config.clone();
         let window_clone = self.window.clone();
-        let tabs = &self.tabs;
-        
+
         load_button.connect_clicked(move |_| {
             if let Some(path) = find_default_config() {
                 match ConfigParser::parse_file(path) {
                     Ok(new_config) => {
-                        // Update config
-                        *config_clone.borrow_mut() = new_config;
-                        
-                        // Update UI with new config
-                        tabs.general.update_from_config(&config_clone.borrow().general);
-                        // Update other tabs as needed
-                        
-                        debug!("Config loaded successfully");
-                    },
-                    Err(e) => {
-                        warn!("Failed to load config: {}", e);
-                        // TODO: Show error dialog
+                        let mut config = config_clone.borrow_mut();
+                        *config = new_config;
+                        // Update UI logic here
+                    }
+                    Err(err) => {
+                        eprintln!("Failed to parse config: {}", err);
                     }
                 }
             }
         });
-        
-        // Connect change handlers from tabs to update config
-        let config_clone = self.config.clone();
-        self.tabs.general.connect_signals(move |field, value| {
-            let mut config = config_clone.borrow_mut();
-            match field {
-                "border_size" => if let Some(val) = value.downcast_ref::<i32>() {
-                    config.general.border_size = *val;
-                },
-                "gaps_in" => if let Some(val) = value.downcast_ref::<String>() {
-                    config.general.gaps_in = val.clone();
-                },
-                // Define other field handlers
-                _ => warn!("Unknown field: {}", field),
+
+        save_button.connect_clicked(move |_| {
+            let config = config_clone.borrow();
+            if let Err(err) = ConfigWriter::write_to_file(&*config) {
+                eprintln!("Failed to save config: {}", err);
             }
         });
     }
