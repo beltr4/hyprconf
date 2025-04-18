@@ -2,31 +2,38 @@
 name = "hyprconf"
 version = "0.1.0"
 edition = "2021"
-authors = ["Andre Beltrame <10011191+beltr4@users.noreply.github.com>"]
+authors = ["Andre Beltrame github.com/betlr4"]
 description = "A graphical configuration tool for Hyprland"
 license = "MIT"
 
 [dependencies]
-# GTK4 bindings
-gtk = { version = "0.6", package = "gtk4", features = ["v4_8"] }
-glib = "0.17"
-gdk = "0.17"
-
-# For async operations
-tokio = { version = "1.28", features = ["full"] }
-# For configuration file parsing
+gtk = { version = "0.16", features = ["v3_24"] }
+gdk = "0.16"
+gio = "0.16"
+glib = "0.16"
+clap = { version = "4.3", features = ["derive"] }
+directories = "5.0"
+shellexpand = "3.1"
+chrono = "0.4"
+thiserror = "1.0"
+regex = "1.9"
+lazy_static = "1.4"
 serde = { version = "1.0", features = ["derive"] }
 serde_json = "1.0"
-# File operations and paths
-dirs = "5.0"
-# Error handling
-anyhow = "1.0"
-thiserror = "1.0"
-# Command execution
-execute = "0.2"
-# Logging
 log = "0.4"
 env_logger = "0.10"
+tempfile = "3.8"
+anyhow = "1.0" 
+
+[dev-dependencies]
+tempfile = "3.8"
 
 [build-dependencies]
-glib-build-tools = "0.17.0"
+glib-build-tools = "0.16"
+
+[profile.release]
+lto = true
+codegen-units = 1
+opt-level = 3
+panic = "abort"
+strip = true

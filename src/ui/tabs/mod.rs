@@ -1,7 +1,7 @@
-mod general;
-mod decoration;
-mod animations;
-mod input;
+pub mod general;
+pub mod decoration;
+pub mod animations;
+pub mod input;
 // Add more tab modules as they are implemented
 
 pub use general::*;

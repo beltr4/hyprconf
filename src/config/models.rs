@@ -23,9 +23,15 @@ pub struct HyprlandConfig {
     pub devices: Vec<DeviceConfig>,
     pub window_rules: Vec<WindowRule>,
     pub workspace_rules: Vec<WorkspaceRule>,
+    pub layer_rules: Vec<LayerRule>,
     pub variables: HashMap<String, String>,
     pub environment_variables: HashMap<String, String>,
     pub autostart_programs: Vec<String>,
+    pub bezier_curves: HashMap<String, String>,
+    pub submap_definitions: HashMap<String, Vec<KeyBind>>,
+    pub ecosystem: EcosystemSection,
+    pub experimental: ExperimentalSection,
+    pub permissions: Vec<Permission>,
 }
 
 /// General section with snap subcategory
@@ -120,7 +126,10 @@ pub struct AnimationsSection {
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct Animation {
     pub name: String,
-    pub params: String,
+    pub enabled: bool,
+    pub speed: i32,
+    pub curve: String,
+    pub style: Option<String>,
 }
 
 /// Input section with touchpad, touchdevice, and tablet subcategories
@@ -313,6 +322,7 @@ pub struct BindsSection {
     pub window_direction_monitor_fallback: bool,
     pub allow_pin_fullscreen: bool,
     pub keybinds: Vec<KeyBind>,
+    pub submaps: HashMap<String, Vec<KeyBind>>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -321,6 +331,8 @@ pub struct KeyBind {
     pub key: String,
     pub dispatchers: Vec<String>,
     pub arg: String,
+    pub flags: Option<String>,
+    pub description: Option<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -374,11 +386,32 @@ pub struct CursorSection {
 pub struct DwindleSection {
     pub pseudotile: bool,
     pub preserve_split: bool,
+    pub smart_split: bool,
+    pub force_split: i32,
+    pub permanent_direction_override: bool,
+    pub special_scale_factor: f32,
+    pub split_width_multiplier: f32,
+    pub use_active_for_splits: bool,
+    pub default_split_ratio: f32,
+    pub split_bias: i32,
+    pub smart_resizing: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct MasterSection {
+    pub allow_small_split: bool,
+    pub special_scale_factor: f32,
+    pub mfact: f32,
     pub new_status: String,
+    pub new_on_top: bool,
+    pub new_on_active: String,
+    pub orientation: String,
+    pub inherit_fullscreen: bool,
+    pub slave_count_for_center_master: i32,
+    pub center_master_slaves_on_right: bool,
+    pub smart_resizing: bool,
+    pub drop_at_cursor: bool,
+    pub always_keep_position: bool,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
@@ -401,27 +434,178 @@ pub struct DebugSection {
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct EcosystemSection {
+    pub no_update_news: bool,
+    pub no_donation_nag: bool,
+    pub enforce_permissions: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct ExperimentalSection {
+    pub xx_color_management_v4: bool,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct MonitorConfig {
     pub name: String,
     pub resolution: String,
     pub position: String,
     pub scale: f32,
+    pub transform: Option<i32>,
+    pub mirror: Option<String>,
+    pub bitdepth: Option<i32>,
+    pub color_management: Option<String>,
+    pub sdr_brightness: Option<f32>,
+    pub sdr_saturation: Option<f32>,
+    pub vrr: Option<i32>,
+    pub disable: bool,
+    pub reserved_area: Option<(i32, i32, i32, i32)>,  // top, bottom, left, right
+}
+
+impl Default for MonitorConfig {
+    fn default() -> Self {
+        Self {
+            name: String::default(),
+            resolution: String::default(),
+            position: String::default(),
+            scale: 1.0,
+            transform: None,
+            mirror: None,
+            bitdepth: None,
+            color_management: None,
+            sdr_brightness: None,
+            sdr_saturation: None,
+            vrr: None,
+            disable: false,
+            reserved_area: None,
+        }
+    }
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct DeviceConfig {
     pub name: String,
-    pub sensitivity: f32,
+    pub sensitivity: Option<f32>,
+    pub accel_profile: Option<String>,
+    pub kb_layout: Option<String>,
+    pub kb_variant: Option<String>,
+    pub kb_options: Option<String>,
+    pub kb_rules: Option<String>,
+    pub kb_model: Option<String>,
+    pub repeat_rate: Option<i32>,
+    pub repeat_delay: Option<i32>,
+    pub natural_scroll: Option<bool>,
+    pub tap_button_map: Option<String>,
+    pub tap_to_click: Option<bool>,
+    pub middle_button_emulation: Option<bool>,
+    pub clickfinger_behavior: Option<bool>,
+    pub drag_lock: Option<bool>,
+    pub tap_and_drag: Option<bool>,
+    pub left_handed: Option<bool>,
+    pub scroll_method: Option<String>,
+    pub scroll_button: Option<i32>,
+    pub transform: Option<i32>,
+    pub output: Option<String>,
+    pub enabled: Option<bool>,
+    pub keybinds: Option<bool>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct WindowRule {
     pub rule: String,
     pub value: String,
+    pub parameters: Vec<String>,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize, Default)]
 pub struct WorkspaceRule {
-    pub name: String,
-    pub params: String,
+    pub workspace: String,
+    pub rules: HashMap<String, String>,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize, Default)]
+pub struct LayerRule {
+    pub rule: String,
+    pub target: String,
+    pub value: Option<String>,
+}
+
+/// Permission definition for Hyprland's permission system
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct Permission {
+    pub path_regex: String,
+    pub permission_type: String,
+    pub mode: PermissionMode,
+}
+
+/// Permission modes available in Hyprland
+#[derive(Debug, Clone, Serialize, Deserialize, PartialEq)]
+pub enum PermissionMode {
+    Allow,
+    Ask,
+    Deny,
+}
+
+impl std::fmt::Display for PermissionMode {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            PermissionMode::Allow => write!(f, "allow"),
+            PermissionMode::Ask => write!(f, "ask"),
+            PermissionMode::Deny => write!(f, "deny"),
+        }
+    }
+}
+
+impl std::str::FromStr for PermissionMode {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.to_lowercase().as_str() {
+            "allow" => Ok(PermissionMode::Allow),
+            "ask" => Ok(PermissionMode::Ask),
+            "deny" => Ok(PermissionMode::Deny),
+            _ => Err(format!("Invalid permission mode: {}", s)),
+        }
+    }
+}
+
+/// Hyprland socket event type for reactive scripting
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub enum HyprlandEvent {
+    WorkspaceChanged(String),
+    FocusedMon(String, String), // Monitor name, workspace name
+    ActiveWindow(String, String), // Window address, window title
+    FullscreenState(String), // Window address
+    MonitorRemoved(String), // Monitor name
+    MonitorAdded(String), // Monitor name
+    CreateWorkspace(String), // Workspace name
+    DestroyWorkspace(String), // Workspace name
+    MoveWorkspace(String, String), // Workspace name, monitor name
+    ActiveLayout(String, String), // Keyboard name, layout name
+    ActiveSpecial(String), // Special workspace name
+    UrgentWindow(String), // Window address
+    Minimize(String, bool), // Window address, minimized state
+    SubMap(String), // Submap name
+    WindowClose(String), // Window address
+    Unknown(String), // Any other events
+}
+
+/// Hyprctl batch command structure
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct HyprctlBatch {
+    pub commands: Vec<String>,
+}
+
+impl HyprctlBatch {
+    pub fn new() -> Self {
+        Self { commands: Vec::new() }
+    }
+
+    pub fn add_command(&mut self, command: String) {
+        self.commands.push(command);
+    }
+
+    pub fn to_string(&self) -> String {
+        self.commands.join(" ; ")
+    }
 }

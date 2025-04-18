@@ -1,440 +1,220 @@
 use gtk::prelude::*;
-use gtk::{Stack, Box as GtkBox, Orientation, Label, Scale, Switch, ColorButton, Frame, ScrolledWindow, DropDown};
-use glib::clone;
-use gtk::gdk; // Use gtk4's gdk module for RGBA
+use gtk::{
+    Box, Grid, Switch, Label, SpinButton, ColorButton, Adjustment, Entry, ComboBoxText,
+};
+use std::rc::Rc;
+use std::cell::RefCell;
 
-use crate::config::models::GeneralSection;
+use crate::app::AppState;
 
-/// Struct to hold all widgets for the general tab
 pub struct GeneralTab {
-    pub border_size: Scale,
-    pub gaps_in: Scale,
-    pub gaps_out: Scale,
-    pub gaps_workspaces: Scale,
-    pub active_border_color: ColorButton,
-    pub inactive_border_color: ColorButton,
-    pub no_border_floating: Switch,
-    pub resize_on_border: Switch,
-    pub no_focus_fallback: Switch,
-    pub allow_tearing: Switch,
-    pub layout_combo: DropDown,
+    widget: Box,
+    app_state: Rc<RefCell<AppState>>,
 }
 
 impl GeneralTab {
-    /// Create a new instance of the general tab
-    pub fn new() -> Self {
-        // Initialize layout dropdown
-        let layout_model = gtk::StringList::new(&["dwindle", "master"]);
+    pub fn new(app_state: Rc<RefCell<AppState>>) -> Self {
+        let widget = Box::new(gtk::Orientation::Vertical, 10);
+        widget.set_margin_start(10);
+        widget.set_margin_end(10);
+        widget.set_margin_top(10);
+        widget.set_margin_bottom(10);
+        widget.set_spacing(10);
+        
+        let grid = Grid::new();
+        grid.set_column_spacing(10);
+        grid.set_row_spacing(10);
+        
+        // Get the current config
+        let config = {
+            let state = app_state.borrow();
+            state.get_config().clone()
+        };
+        
+        // Row counter
+        let mut row = 0;
+        
+        // Sensitivity setting
+        if let Some(general) = &config.general {
+            // Sensitivity control
+            let sens_label = Label::new(Some("Mouse Sensitivity:"));
+            sens_label.set_halign(gtk::Align::End);
+            
+            let sens_adjustment = Adjustment::new(
+                general.sensitivity.unwrap_or(1.0),
+                0.0, 10.0, 0.1, 1.0, 0.0
+            );
+            let sens_spinner = SpinButton::new(Some(&sens_adjustment), 0.1, 1);
+            
+            grid.attach(&sens_label, 0, row, 1, 1);
+            grid.attach(&sens_spinner, 1, row, 1, 1);
+            
+            row += 1;
+            
+            // Apply sensitivity to raw input
+            let apply_sens_label = Label::new(Some("Apply Sensitivity to Raw Input:"));
+            apply_sens_label.set_halign(gtk::Align::End);
+            
+            let apply_sens_switch = Switch::new();
+            apply_sens_switch.set_active(general.apply_sens_to_raw.unwrap_or(false));
+            
+            grid.attach(&apply_sens_label, 0, row, 1, 1);
+            grid.attach(&apply_sens_switch, 1, row, 1, 1);
+            
+            row += 1;
+            
+            // Border size
+            let border_label = Label::new(Some("Border Size:"));
+            border_label.set_halign(gtk::Align::End);
+            
+            let border_adjustment = Adjustment::new(
+                general.border_size.unwrap_or(1) as f64,
+                0.0, 10.0, 1.0, 1.0, 0.0
+            );
+            let border_spinner = SpinButton::new(Some(&border_adjustment), 1.0, 0);
+            
+            grid.attach(&border_label, 0, row, 1, 1);
+            grid.attach(&border_spinner, 1, row, 1, 1);
+            
+            row += 1;
+            
+            // No border on floating
+            let no_border_label = Label::new(Some("No Border on Floating Windows:"));
+            no_border_label.set_halign(gtk::Align::End);
+            
+            let no_border_switch = Switch::new();
+            no_border_switch.set_active(general.no_border_on_floating.unwrap_or(false));
+            
+            grid.attach(&no_border_label, 0, row, 1, 1);
+            grid.attach(&no_border_switch, 1, row, 1, 1);
+            
+            row += 1;
+            
+            // Gaps in
+            let gaps_in_label = Label::new(Some("Inner Gaps:"));
+            gaps_in_label.set_halign(gtk::Align::End);
+            
+            let gaps_in_adjustment = Adjustment::new(
+                general.gaps_in.unwrap_or(5) as f64,
+                0.0, 50.0, 1.0, 5.0, 0.0
+            );
+            let gaps_in_spinner = SpinButton::new(Some(&gaps_in_adjustment), 1.0, 0);
+            
+            grid.attach(&gaps_in_label, 0, row, 1, 1);
+            grid.attach(&gaps_in_spinner, 1, row, 1, 1);
+            
+            row += 1;
+            
+            // Gaps out
+            let gaps_out_label = Label::new(Some("Outer Gaps:"));
+            gaps_out_label.set_halign(gtk::Align::End);
+            
+            let gaps_out_adjustment = Adjustment::new(
+                general.gaps_out.unwrap_or(20) as f64,
+                0.0, 100.0, 1.0, 5.0, 0.0
+            );
+            let gaps_out_spinner = SpinButton::new(Some(&gaps_out_adjustment), 1.0, 0);
+            
+            grid.attach(&gaps_out_label, 0, row, 1, 1);
+            grid.attach(&gaps_out_spinner, 1, row, 1, 1);
+            
+            row += 1;
+            
+            // Active border color
+            let active_border_label = Label::new(Some("Active Border Color:"));
+            active_border_label.set_halign(gtk::Align::End);
+            
+            let active_border_button = ColorButton::new();
+            // We'd need to parse the color string from the config here
+            // For now, just set a default color
+            
+            grid.attach(&active_border_label, 0, row, 1, 1);
+            grid.attach(&active_border_button, 1, row, 1, 1);
+            
+            row += 1;
+            
+            // Inactive border color
+            let inactive_border_label = Label::new(Some("Inactive Border Color:"));
+            inactive_border_label.set_halign(gtk::Align::End);
+            
+            let inactive_border_button = ColorButton::new();
+            // We'd need to parse the color string from the config here
+            
+            grid.attach(&inactive_border_label, 0, row, 1, 1);
+            grid.attach(&inactive_border_button, 1, row, 1, 1);
+            
+            row += 1;
+            
+            // Resize on border
+            let resize_border_label = Label::new(Some("Resize on Border:"));
+            resize_border_label.set_halign(gtk::Align::End);
+            
+            let resize_border_switch = Switch::new();
+            resize_border_switch.set_active(general.resize_on_border.unwrap_or(false));
+            
+            grid.attach(&resize_border_label, 0, row, 1, 1);
+            grid.attach(&resize_border_switch, 1, row, 1, 1);
+            
+            row += 1;
+            
+            // Hover icon on border
+            let hover_icon_label = Label::new(Some("Hover Icon on Border:"));
+            hover_icon_label.set_halign(gtk::Align::End);
+            
+            let hover_icon_switch = Switch::new();
+            hover_icon_switch.set_active(general.hover_icon_on_border.unwrap_or(false));
+            
+            grid.attach(&hover_icon_label, 0, row, 1, 1);
+            grid.attach(&hover_icon_switch, 1, row, 1, 1);
+            
+            row += 1;
+            
+            // Layout
+            let layout_label = Label::new(Some("Layout:"));
+            layout_label.set_halign(gtk::Align::End);
+            
+            let layout_combo = ComboBoxText::new();
+            layout_combo.append(Some("dwindle"), "Dwindle");
+            layout_combo.append(Some("master"), "Master");
+            
+            if let Some(layout) = &general.layout {
+                layout_combo.set_active_id(Some(layout));
+            } else {
+                layout_combo.set_active_id(Some("dwindle"));
+            }
+            
+            grid.attach(&layout_label, 0, row, 1, 1);
+            grid.attach(&layout_combo, 1, row, 1, 1);
+            
+            row += 1;
+            
+            // Allow tearing
+            let tearing_label = Label::new(Some("Allow Tearing:"));
+            tearing_label.set_halign(gtk::Align::End);
+            
+            let tearing_switch = Switch::new();
+            tearing_switch.set_active(general.allow_tearing.unwrap_or(false));
+            
+            // Create a row for tearing
+            let tearing_row = Box::new(gtk::Orientation::Horizontal, 10);
+            tearing_row.pack_start(&tearing_label, false, false, 0);
+            tearing_row.pack_start(&tearing_switch, false, false, 0);
+            
+            grid.attach(&tearing_label, 0, row, 1, 1);
+            grid.attach(&tearing_switch, 1, row, 1, 1);
+            
+            row += 1;
+        }
+        
+        widget.pack_start(&grid, true, true, 0);
         
         Self {
-            border_size: Scale::new(Orientation::Horizontal, Some(&gtk::Adjustment::new(1.0, 0.0, 10.0, 1.0, 1.0, 0.0))),
-            gaps_in: Scale::new(Orientation::Horizontal, Some(&gtk::Adjustment::new(5.0, 0.0, 50.0, 1.0, 5.0, 0.0))),
-            gaps_out: Scale::new(Orientation::Horizontal, Some(&gtk::Adjustment::new(20.0, 0.0, 100.0, 1.0, 5.0, 0.0))),
-            gaps_workspaces: Scale::new(Orientation::Horizontal, Some(&gtk::Adjustment::new(0.0, 0.0, 50.0, 1.0, 5.0, 0.0))),
-            active_border_color: ColorButton::new(),
-            inactive_border_color: ColorButton::new(),
-            no_border_floating: Switch::new(),
-            resize_on_border: Switch::new(),
-            no_focus_fallback: Switch::new(),
-            allow_tearing: Switch::new(),
-            layout_combo: DropDown::new(Some(layout_model), None::<gtk::Expression>), // Specify type for None
+            widget,
+            app_state,
         }
     }
     
-    /// Build the general tab UI
-    pub fn build_ui(&self, stack: &Stack) {
-        let content = GtkBox::new(Orientation::Vertical, 10);
-        content.set_margin_top(20);
-        content.set_margin_bottom(20);
-        content.set_margin_start(20);
-        content.set_margin_end(20);
-        
-        // Add some description text
-        let heading = Label::new(Some("General Settings"));
-        heading.set_halign(gtk::Align::Start);
-        heading.add_css_class("title-3");
-        content.append(&heading);
-        
-        let description = Label::new(Some("Configure general window behavior, borders, and gaps."));
-        description.set_halign(gtk::Align::Start);
-        description.set_margin_bottom(10);
-        content.append(&description);
-        
-        // Create a scrolled window to contain all settings
-        let scrolled = ScrolledWindow::new();
-        scrolled.set_vexpand(true);
-        
-        let settings_box = GtkBox::new(Orientation::Vertical, 15);
-        settings_box.set_margin_top(10);
-        settings_box.set_margin_bottom(10);
-        settings_box.set_margin_start(10);
-        settings_box.set_margin_end(10);
-        
-        // Add borders section
-        settings_box.append(&self.create_borders_section());
-        
-        // Add gaps section
-        settings_box.append(&self.create_gaps_section());
-        
-        // Add behavior section
-        settings_box.append(&self.create_behavior_section());
-        
-        // Add to scrolled window
-        scrolled.set_child(Some(&settings_box));
-        content.append(&scrolled);
-        
-        stack.add_titled(&content, Some("general"), "General");
-    }
-    
-    /// Create the borders section
-    fn create_borders_section(&self) -> Frame {
-        let borders_frame = Frame::new(Some("Borders"));
-        let borders_box = GtkBox::new(Orientation::Vertical, 10);
-        borders_box.set_margin_top(10);
-        borders_box.set_margin_bottom(10);
-        borders_box.set_margin_start(10);
-        borders_box.set_margin_end(10);
-        
-        // Border size
-        let border_row = GtkBox::new(Orientation::Horizontal, 10);
-        let border_label = Label::new(Some("Border Size:"));
-        border_label.set_halign(gtk::Align::Start);
-        border_label.set_hexpand(true);
-        border_row.append(&border_label);
-        border_row.append(&self.border_size);
-        self.border_size.set_draw_value(true);
-        self.border_size.set_value_pos(gtk::PositionType::Right);
-        self.border_size.set_size_request(150, -1);
-        borders_box.append(&border_row);
-        
-        // No border on floating
-        let floating_border_row = GtkBox::new(Orientation::Horizontal, 10);
-        let floating_border_label = Label::new(Some("No Border on Floating Windows:"));
-        floating_border_label.set_halign(gtk::Align::Start);
-        floating_border_label.set_hexpand(true);
-        floating_border_row.append(&floating_border_label);
-        floating_border_row.append(&self.no_border_floating);
-        borders_box.append(&floating_border_row);
-        
-        // Active border color
-        let active_color_row = GtkBox::new(Orientation::Horizontal, 10);
-        let active_color_label = Label::new(Some("Active Border Color:"));
-        active_color_label.set_halign(gtk::Align::Start);
-        active_color_label.set_hexpand(true);
-        active_color_row.append(&active_color_label);
-        active_color_row.append(&self.active_border_color);
-        borders_box.append(&active_color_row);
-        
-        // Inactive border color
-        let inactive_color_row = GtkBox::new(Orientation::Horizontal, 10);
-        let inactive_color_label = Label::new(Some("Inactive Border Color:"));
-        inactive_color_label.set_halign(gtk::Align::Start);
-        inactive_color_label.set_hexpand(true);
-        inactive_color_row.append(&inactive_color_label);
-        inactive_color_row.append(&self.inactive_border_color);
-        borders_box.append(&inactive_color_row);
-        
-        // Add to frame
-        borders_frame.set_child(Some(&borders_box));
-        borders_frame
-    }
-    
-    /// Create the gaps section
-    fn create_gaps_section(&self) -> Frame {
-        let gaps_frame = Frame::new(Some("Gaps"));
-        let gaps_box = GtkBox::new(Orientation::Vertical, 10);
-        gaps_box.set_margin_top(10);
-        gaps_box.set_margin_bottom(10);
-        gaps_box.set_margin_start(10);
-        gaps_box.set_margin_end(10);
-        
-        // Gaps in
-        let gaps_in_row = GtkBox::new(Orientation::Horizontal, 10);
-        let gaps_in_label = Label::new(Some("Inner Gaps:"));
-        gaps_in_label.set_halign(gtk::Align::Start);
-        gaps_in_label.set_hexpand(true);
-        gaps_in_row.append(&gaps_in_label);
-        gaps_in_row.append(&self.gaps_in);
-        self.gaps_in.set_draw_value(true);
-        self.gaps_in.set_value_pos(gtk::PositionType::Right);
-        self.gaps_in.set_size_request(150, -1);
-        gaps_box.append(&gaps_in_row);
-        
-        // Gaps out
-        let gaps_out_row = GtkBox::new(Orientation::Horizontal, 10);
-        let gaps_out_label = Label::new(Some("Outer Gaps:"));
-        gaps_out_label.set_halign(gtk::Align::Start);
-        gaps_out_label.set_hexpand(true);
-        gaps_out_row.append(&gaps_out_label);
-        gaps_out_row.append(&self.gaps_out);
-        self.gaps_out.set_draw_value(true);
-        self.gaps_out.set_value_pos(gtk::PositionType::Right);
-        self.gaps_out.set_size_request(150, -1);
-        gaps_box.append(&gaps_out_row);
-        
-        // Gaps between workspaces
-        let gaps_workspaces_row = GtkBox::new(Orientation::Horizontal, 10);
-        let gaps_workspaces_label = Label::new(Some("Workspace Gaps:"));
-        gaps_workspaces_label.set_halign(gtk::Align::Start);
-        gaps_workspaces_label.set_hexpand(true);
-        gaps_workspaces_row.append(&gaps_workspaces_label);
-        gaps_workspaces_row.append(&self.gaps_workspaces);
-        self.gaps_workspaces.set_draw_value(true);
-        self.gaps_workspaces.set_value_pos(gtk::PositionType::Right);
-        self.gaps_workspaces.set_size_request(150, -1);
-        gaps_box.append(&gaps_workspaces_row);
-        
-        // Add to frame
-        gaps_frame.set_child(Some(&gaps_box));
-        gaps_frame
-    }
-    
-    /// Create the behavior section
-    fn create_behavior_section(&self) -> Frame {
-        let behavior_frame = Frame::new(Some("Behavior"));
-        let behavior_box = GtkBox::new(Orientation::Vertical, 10);
-        behavior_box.set_margin_top(10);
-        behavior_box.set_margin_bottom(10);
-        behavior_box.set_margin_start(10);
-        behavior_box.set_margin_end(10);
-        
-        // Layout
-        let layout_row = GtkBox::new(Orientation::Horizontal, 10);
-        let layout_label = Label::new(Some("Layout:"));
-        layout_label.set_halign(gtk::Align::Start);
-        layout_label.set_hexpand(true);
-        layout_row.append(&layout_label);
-        layout_row.append(&self.layout_combo);
-        behavior_box.append(&layout_row);
-        
-        // Resize on border
-        let resize_row = GtkBox::new(Orientation::Horizontal, 10);
-        let resize_label = Label::new(Some("Resize on Border:"));
-        resize_label.set_halign(gtk::Align::Start);
-        resize_label.set_hexpand(true);
-        resize_row.append(&resize_label);
-        resize_row.append(&self.resize_on_border);
-        behavior_box.append(&resize_row);
-        
-        // No focus fallback
-        let focus_fallback_row = GtkBox::new(Orientation::Horizontal, 10);
-        let focus_fallback_label = Label::new(Some("Disable Focus Fallback:"));
-        focus_fallback_label.set_halign(gtk::Align::Start);
-        focus_fallback_label.set_hexpand(true);
-        focus_fallback_row.append(&focus_fallback_label);
-        focus_fallback_row.append(&self.no_focus_fallback);
-        behavior_box.append(&focus_fallback_row);
-        
-        // Allow tearing
-        let tearing_row = GtkBox::new(Orientation::Horizontal, 10);
-        let tearing_label = Label::new(Some("Allow Tearing:"));
-        tearing_label.set_halign(gtk::Align::Start);
-        tearing_label.set_hexpand(true);
-        tearing_row.append(&tearing_label);
-        tearing_row.append(&self.allow_tearing);
-        behavior_box.append(&tearing_row);
-        
-        // Add to frame
-        behavior_frame.set_child(Some(&behavior_box));
-        behavior_frame
-    }
-    
-    /// Update the UI from a configuration section
-    pub fn update_from_config(&self, section: &GeneralSection) {
-        // Update border size
-        self.border_size.set_value(section.border_size as f64);
-        
-        // Parse gaps values - handle both int and CSS style
-        let gaps_in = if let Ok(val) = section.gaps_in.parse::<i32>() {
-            val as f64
-        } else {
-            // If it's a CSS style value, just use the first number
-            let first_num = section.gaps_in.split_whitespace()
-                .next()
-                .and_then(|s| s.parse::<i32>().ok())
-                .unwrap_or(5);
-            first_num as f64
-        };
-        
-        let gaps_out = if let Ok(val) = section.gaps_out.parse::<i32>() {
-            val as f64
-        } else {
-            // If it's a CSS style value, just use the first number
-            let first_num = section.gaps_out.split_whitespace()
-                .next()
-                .and_then(|s| s.parse::<i32>().ok())
-                .unwrap_or(20);
-            first_num as f64
-        };
-        
-        self.gaps_in.set_value(gaps_in);
-        self.gaps_out.set_value(gaps_out);
-        self.gaps_workspaces.set_value(section.gaps_workspaces as f64);
-        
-        // Set colors
-        set_color_from_hyprland_string(&self.active_border_color, &section.col_active_border);
-        set_color_from_hyprland_string(&self.inactive_border_color, &section.col_inactive_border);
-        
-        // Set switches
-        self.no_border_floating.set_active(section.no_border_on_floating);
-        self.resize_on_border.set_active(section.resize_on_border);
-        self.no_focus_fallback.set_active(section.no_focus_fallback);
-        self.allow_tearing.set_active(section.allow_tearing);
-        
-        // Set dropdown for layout
-        let layout_index = match section.layout.as_str() {
-            "master" => 1,
-            _ => 0, // Default to dwindle
-        };
-        self.layout_combo.set_selected(layout_index as u32);
-    }
-    
-    pub fn connect_signals<F>(&self, callback: F) 
-    where 
-        F: Fn(&str, &dyn std::any::Any) + 'static
-    {
-        // Border size
-        let callback = std::rc::Rc::new(callback);
-        let cb = callback.clone();
-        self.border_size.connect_value_changed(move |scale| {
-            let value = scale.value() as i32;
-            cb("border_size", &value);
-        });
-        
-        // Gaps in
-        let cb = callback.clone();
-        self.gaps_in.connect_value_changed(move |scale| {
-            let value = scale.value() as i32;
-            cb("gaps_in", &value.to_string());
-        });
-        
-        // Gaps out
-        let cb = callback.clone();
-        self.gaps_out.connect_value_changed(move |scale| {
-            let value = scale.value() as i32;
-            cb("gaps_out", &value.to_string());
-        });
-        
-        // Gaps workspaces
-        let cb = callback.clone();
-        self.gaps_workspaces.connect_value_changed(move |scale| {
-            let value = scale.value() as i32;
-            cb("gaps_workspaces", &value);
-        });
-        
-        // Active border color
-        let cb = callback.clone();
-        self.active_border_color.connect_rgba_notify(move |button| {
-            let rgba = button.rgba();
-            let color_string = format!(
-                "rgba({:02x}{:02x}{:02x}{:02x})",
-                (rgba.red() * 255.0) as u8,
-                (rgba.green() * 255.0) as u8,
-                (rgba.blue() * 255.0) as u8,
-                (rgba.alpha() * 255.0) as u8
-            );
-            cb("col_active_border", &color_string);
-        });
-        
-        // Inactive border color
-        let cb = callback.clone();
-        self.inactive_border_color.connect_rgba_notify(move |button| {
-            let rgba = button.rgba();
-            let color_string = format!(
-                "rgba({:02x}{:02x}{:02x}{:02x})",
-                (rgba.red() * 255.0) as u8,
-                (rgba.green() * 255.0) as u8,
-                (rgba.blue() * 255.0) as u8,
-                (rgba.alpha() * 255.0) as u8
-            );
-            cb("col_inactive_border", &color_string);
-        });
-        
-        // No border on floating
-        let cb = callback.clone();
-        self.no_border_floating.connect_state_notify(move |switch| {
-            let value = switch.is_active();
-            cb("no_border_on_floating", &value);
-        });
-        
-        // Resize on border
-        let cb = callback.clone();
-        self.resize_on_border.connect_state_notify(move |switch| {
-            let value = switch.is_active();
-            cb("resize_on_border", &value);
-        });
-        
-        // No focus fallback
-        let cb = callback.clone();
-        self.no_focus_fallback.connect_state_notify(move |switch| {
-            let value = switch.is_active();
-            cb("no_focus_fallback", &value);
-        });
-        
-        // Allow tearing
-        let cb = callback.clone();
-        self.allow_tearing.connect_state_notify(move |switch| {
-            let value = switch.is_active();
-            cb("allow_tearing", &value);
-        });
-        
-        // Layout
-        let cb = callback.clone();
-        self.layout_combo.connect_selected_notify(move |dropdown| {
-            let selected = dropdown.selected();
-            let layout = match selected {
-                1 => "master",
-                _ => "dwindle",
-            };
-            cb("layout", &layout.to_string());
-        });
-    }
-}
-
-/// Helper to set ColorButton from Hyprland color format
-fn set_color_from_hyprland_string(button: &ColorButton, color_str: &str) {
-    if color_str.starts_with("rgba(") && color_str.ends_with(')') {
-        let inner = &color_str[5..color_str.len() - 1];
-        let rgba = if inner.contains(',') {
-            let parts: Vec<&str> = inner.split(',').collect();
-            if parts.len() == 4 {
-                let r = parts[0].trim().parse::<f32>().unwrap_or(0.0) / 255.0;
-                let g = parts[1].trim().parse::<f32>().unwrap_or(0.0) / 255.0;
-                let b = parts[2].trim().parse::<f32>().unwrap_or(0.0) / 255.0;
-                let a = parts[3].trim().parse::<f32>().unwrap_or(1.0);
-                gdk::RGBA::new(r, g, b, a) // Use gtk4's gdk::RGBA
-            } else {
-                gdk::RGBA::new(1.0, 1.0, 1.0, 1.0) // Default white
-            }
-        } else {
-            gdk::RGBA::new(1.0, 1.0, 1.0, 1.0) // Default white
-        };
-        button.set_rgba(&rgba);
-    } else if color_str.starts_with("rgb(") && color_str.ends_with(')') {
-        let inner = &color_str[4..color_str.len() - 1];
-        let parts: Vec<&str> = inner.split(',').collect();
-        if parts.len() == 3 {
-            let r = parts[0].trim().parse::<f32>().unwrap_or(0.0) / 255.0;
-            let g = parts[1].trim().parse::<f32>().unwrap_or(0.0) / 255.0;
-            let b = parts[2].trim().parse::<f32>().unwrap_or(0.0) / 255.0;
-            let rgba = gdk::RGBA::new(r, g, b, 1.0);
-            button.set_rgba(&rgba);
-        } else {
-            eprintln!("Invalid rgb() format: {}", color_str);
-        }
-    } else if color_str.starts_with("0x") && color_str.len() == 10 {
-        let hex = &color_str[2..];
-        if hex.len() == 8 {
-            let a = u8::from_str_radix(&hex[0..2], 16).unwrap_or(255) as f32 / 255.0;
-            let r = u8::from_str_radix(&hex[2..4], 16).unwrap_or(255) as f32 / 255.0;
-            let g = u8::from_str_radix(&hex[4..6], 16).unwrap_or(255) as f32 / 255.0;
-            let b = u8::from_str_radix(&hex[6..8], 16).unwrap_or(255) as f32 / 255.0;
-            let rgba = gdk::RGBA::new(r, g, b, a);
-            button.set_rgba(&rgba);
-        } else {
-            eprintln!("Invalid 0x format: {}", color_str);
-        }
-    } else {
-        eprintln!("Unsupported color format: {}", color_str);
+    pub fn get_widget(&self) -> &Box {
+        &self.widget
     }
 }
