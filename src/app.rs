@@ -58,11 +58,11 @@ impl AppState {
         Ok(Self { config_manager, is_modified: false })
     }
 
-    pub fn get_config(&self) -> &crate::config::models::HyprlandConfig {
+    pub fn get_config(&self) -> &crate::config::models::core::HyprlandConfig {
         self.config_manager.get_config()
     }
 
-    pub fn get_config_mut(&mut self) -> &mut crate::config::models::HyprlandConfig {
+    pub fn get_config_mut(&mut self) -> &mut crate::config::models::core::HyprlandConfig {
         self.is_modified = true;
         self.config_manager.get_config_mut()
     }

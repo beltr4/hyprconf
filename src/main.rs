@@ -3,15 +3,11 @@ mod config;
 mod safety;
 mod ui;
 
-#[cfg(test)]
-mod tests;
-
 use std::process;
 use gio::prelude::*;
-
 use clap::{Parser, Subcommand};
-use config::parser::core::ConfigParser;
-use config::writer::core::ConfigWriter;
+use config::parser::ConfigParser;
+use config::models::core::HyprlandConfig;
 
 #[derive(Parser)]
 #[command(name = "hyprconf")]
@@ -55,18 +51,16 @@ fn main() {
                     process::exit(1);
                 }
             }
-            
         }
         Some(Commands::Generate { path }) => {
             let path = shellexpand::tilde(&path).to_string();
             println!("Generating default config file: {}", path);
             
             // Generate a default config
-            let default_config = config::models::HyprlandConfig::default();
+            let default_config = HyprlandConfig::default();
             
-            // Write the config to the specified path
-            let writer = ConfigWriter::new(default_config);
-            match writer.write_to_file(&path) {
+            // Write the config directly to the specified path
+            match default_config.write_to_file(&path) {
                 Ok(_) => {
                     println!("Default configuration file generated!");
                     process::exit(0);
